@@ -185,6 +185,17 @@ if not st.session_state.training_done:
         '👈 Set your parameters in the sidebar and click '
         '"▶ Run & Find Optimal Path" to begin.'
     )
+    st.subheader('🗺️ Network Map')
+    fig_net_init = plot_network(None, source, destination)
+    st.pyplot(fig_net_init, use_container_width=True)
+    plt.close(fig_net_init)
+    st.caption(
+        '🔵 Blue = Bus  |  🟢 Green = Metro  |  '
+        '🟠 Amber = Auto  |  '
+        '🟣 Purple = Transfer hub  |  '
+        '🟢 Green node = Source  |  '
+        '🔴 Red node = Destination'
+    )
     st.stop()
 
 # ────────────────────────────────────────────────────────────────

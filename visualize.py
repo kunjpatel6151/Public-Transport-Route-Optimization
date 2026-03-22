@@ -40,20 +40,46 @@ def plot_learning_curve(rewards):
 
 
 def plot_network(best_path_stops=None, source=0, destination=24):
-    G   = nx.DiGraph()
-    pos = {s: ((s % 5) * 2.4, -(s // 5) * 2.4) for s in range(25)}
+    ROUTE_COLORS = {
+        'Bus1':   '#1E40AF',
+        'Bus2':   '#2563EB',
+        'Bus3':   '#3B82F6',
+        'Bus4':   '#60A5FA',
+        'Bus5':   '#93C5FD',
+        'Bus6':   '#1D4ED8',
+        'Bus7':   '#1E3A8A',
+        'Bus8':   '#172554',
+        'Metro1': '#14532D',
+        'Metro2': '#166534',
+        'Metro3': '#15803D',
+        'Metro4': '#16A34A',
+        'Metro5': '#22C55E',
+        'Auto1':  '#78350F',
+        'Auto2':  '#92400E',
+        'Auto3':  '#B45309',
+        'Auto4':  '#D97706',
+        'Auto5':  '#F59E0B',
+        'Auto6':  '#FBBF24',
+        'Auto7':  '#7C2D12',
+        'Auto8':  '#9A3412',
+        'Auto9':  '#C2410C',
+        'Auto10': '#EA580C',
+        'Auto11': '#F97316',
+        'Auto12': '#FB923C',
+    }
+
+    RAD_SEQUENCE = [0.0, 0.18, 0.35, -0.18, -0.35]
+
+    pos = {s: ((s % 5) * 2.6, -(s // 5) * 2.6) for s in range(25)}
+
+    G = nx.DiGraph()
     G.add_nodes_from(range(25))
 
-    edge_colors = {}
-    for rname, rinfo in ROUTES.items():
-        stops = rinfo['stops']
-        color = ('#2563EB' if rinfo['mode'] == 'bus'
-                 else '#16A34A' if rinfo['mode'] == 'metro'
-                 else '#D97706')
-        for i in range(len(stops) - 1):
-            G.add_edge(stops[i], stops[i + 1])
-            edge_colors[(stops[i], stops[i + 1])] = color
+    fig, ax = plt.subplots(figsize=(16, 13))
+    fig.patch.set_facecolor('#F9FAFB')
+    ax.set_facecolor('#F9FAFB')
 
+    # --- STEP 1: Draw nodes ---
     node_colors = []
     for s in range(25):
         if s == source:        node_colors.append('#15803D')
@@ -61,40 +87,90 @@ def plot_network(best_path_stops=None, source=0, destination=24):
         elif s in HUB_STOPS:   node_colors.append('#7C3AED')
         else:                  node_colors.append('#6B7280')
 
-    ec = [edge_colors.get((u, v), '#D1D5DB') for u, v in G.edges()]
+    nx.draw_networkx_nodes(G, pos, ax=ax,
+                           nodelist=list(range(25)),
+                           node_color=node_colors,
+                           node_size=800,
+                           edgecolors='white',
+                           linewidths=1.5)
+    nx.draw_networkx_labels(G, pos, ax=ax,
+                            labels={s: f'S{s}' for s in range(25)},
+                            font_color='white',
+                            font_size=8,
+                            font_weight='bold')
 
-    fig, ax = plt.subplots(figsize=(11, 9))
-    fig.patch.set_facecolor('#F9FAFB')
-    ax.set_facecolor('#F9FAFB')
+    # --- STEP 2 & 3: Draw route edges with FancyArrowPatch + labels ---
+    # Track how many routes have been drawn on each directed edge pair
+    edge_count = defaultdict(int)
 
-    nx.draw(G, pos, ax=ax,
-            with_labels=True,
-            labels={s: f'S{s}' for s in range(25)},
-            node_color=node_colors,
-            edge_color=ec,
-            node_size=750,
-            font_color='white',
-            font_size=8,
-            font_weight='bold',
-            arrows=True,
-            arrowsize=10,
-            connectionstyle='arc3,rad=0.05')
+    for rname, rinfo in ROUTES.items():
+        stops = rinfo['stops']
+        color = ROUTE_COLORS.get(rname, '#6B7280')
 
+        for i in range(len(stops) - 1):
+            u, v = stops[i], stops[i + 1]
+            # Normalise the edge pair so (u,v) and (v,u) share the
+            # same counter — prevents overlapping in opposite directions
+            pair = (min(u, v), max(u, v))
+            idx = edge_count[pair]
+            edge_count[pair] += 1
+
+            rad = RAD_SEQUENCE[idx % len(RAD_SEQUENCE)]
+
+            p_u = pos[u]
+            p_v = pos[v]
+
+            arrow = mpatches.FancyArrowPatch(
+                posA=p_u, posB=p_v,
+                arrowstyle='->', mutation_scale=12,
+                connectionstyle=f'arc3,rad={rad}',
+                color=color, lw=1.2, zorder=2,
+            )
+            ax.add_patch(arrow)
+
+            # Label at midpoint, offset perpendicular for curved arcs
+            mx = (p_u[0] + p_v[0]) / 2
+            my = (p_u[1] + p_v[1]) / 2
+
+            # Perpendicular offset based on rad value
+            dx = p_v[0] - p_u[0]
+            dy = p_v[1] - p_u[1]
+            length = np.sqrt(dx * dx + dy * dy)
+            if length > 0:
+                # Perpendicular unit vector (rotated 90°)
+                px = -dy / length
+                py = dx / length
+                offset = rad * length * 0.35
+                mx += px * offset
+                my += py * offset
+
+            ax.text(mx, my, rname, fontsize=6, color=color,
+                    ha='center', va='center', zorder=3,
+                    fontweight='bold',
+                    bbox=dict(boxstyle='round,pad=0.1',
+                              facecolor='#F9FAFB', edgecolor='none',
+                              alpha=0.8))
+
+    # --- STEP 4: Draw optimal path overlay ---
     if best_path_stops and len(best_path_stops) > 1:
-        path_edges = [(best_path_stops[i], best_path_stops[i + 1])
-                      for i in range(len(best_path_stops) - 1)]
-        nx.draw_networkx_edges(G, pos, ax=ax,
-                               edgelist=path_edges,
-                               edge_color='#EF4444',
-                               width=4.5,
-                               arrows=True,
-                               arrowsize=18,
-                               connectionstyle='arc3,rad=0.05')
+        for i in range(len(best_path_stops) - 1):
+            u = best_path_stops[i]
+            v = best_path_stops[i + 1]
+            p_u = pos[u]
+            p_v = pos[v]
+            arrow = mpatches.FancyArrowPatch(
+                posA=p_u, posB=p_v,
+                arrowstyle='->', mutation_scale=18,
+                connectionstyle='arc3,rad=0.0',
+                color='#EF4444', lw=3.5, zorder=5,
+            )
+            ax.add_patch(arrow)
 
+    # --- STEP 5: Legend ---
     legend_handles = [
-        mpatches.Patch(color='#2563EB', label='Bus route'),
-        mpatches.Patch(color='#16A34A', label='Metro route'),
-        mpatches.Patch(color='#D97706', label='Auto route'),
+        mpatches.Patch(color='#2563EB', label='Bus routes'),
+        mpatches.Patch(color='#16A34A', label='Metro routes'),
+        mpatches.Patch(color='#D97706', label='Auto routes'),
         mpatches.Patch(color='#7C3AED', label='Transfer hub'),
         mpatches.Patch(color='#15803D', label=f'Source (S{source})'),
         mpatches.Patch(color='#DC2626', label=f'Destination (S{destination})'),
@@ -102,8 +178,10 @@ def plot_network(best_path_stops=None, source=0, destination=24):
     ]
     ax.legend(handles=legend_handles, loc='lower right',
               fontsize=8, framealpha=0.9)
+
     ax.set_title('Public Transport Network — 25 Stops | 25 Routes',
-                 fontsize=13, pad=12)
+                 fontsize=13, pad=14)
+    ax.axis('off')
     plt.tight_layout()
     return fig
 
