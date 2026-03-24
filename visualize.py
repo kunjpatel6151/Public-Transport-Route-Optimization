@@ -187,35 +187,62 @@ def plot_network(best_path_stops=None, source=0, destination=24):
 
 
 def plot_qtable(Q):
-    stop_val = defaultdict(float)
+    """
+    Scatter plot showing every single Q-table entry as one dot.
+    x-axis  = stop number (0 to 24)
+    y-axis  = Q-value (can be positive or negative)
+    colour  = green (#16A34A) if Q-value >= 0
+              red   (#DC2626) if Q-value <  0
+
+    This replaces the old max-per-stop bar chart which hid
+    negative values because defaultdict(float) defaulted
+    unvisited stops to 0.0, masking all negative Q-values.
+    Every entry in the Q-table is now plotted individually
+    so the full distribution is visible.
+    """
+    xs = []
+    ys = []
+    cs = []
+
     for (state, _), val in Q.items():
-        s = state[0]
-        if val > stop_val[s]:
-            stop_val[s] = val
+        xs.append(state[0])
+        ys.append(round(val, 2))
+        cs.append('#16A34A' if val >= 0 else '#DC2626')
 
-    stops  = list(range(25))
-    values = [stop_val.get(s, 0.0) for s in stops]
-    colors = ['#16A34A' if v > 0 else '#DC2626' for v in values]
-
-    fig, ax = plt.subplots(figsize=(13, 4))
+    fig, ax = plt.subplots(figsize=(14, 5))
     fig.patch.set_facecolor('#F9FAFB')
     ax.set_facecolor('#F9FAFB')
 
-    bars = ax.bar([f'S{s}' for s in stops], values,
-                  color=colors, edgecolor='white', linewidth=0.5)
-    ax.axhline(0, color='#9CA3AF', linewidth=0.8)
+    ax.scatter(xs, ys, c=cs, alpha=0.5, s=18, linewidths=0)
 
-    for bar, val in zip(bars, values):
-        if val != 0:
-            ax.text(bar.get_x() + bar.get_width() / 2,
-                    val + (0.5 if val > 0 else -1.5),
-                    f'{val:.1f}', ha='center', va='bottom',
-                    fontsize=6, color='#374151')
+    ax.axhline(0, color='#9CA3AF', linewidth=0.8, linestyle='--')
 
-    ax.set_xlabel('Stop', fontsize=11)
-    ax.set_ylabel('Max Q-value', fontsize=11)
-    ax.set_title('Max Q-value Learned per Stop', fontsize=13, pad=12)
-    ax.grid(True, axis='y', alpha=0.3)
-    plt.xticks(rotation=45, fontsize=8)
+    ax.set_xlabel('Stop number', fontsize=11)
+    ax.set_ylabel('Q-value', fontsize=11)
+    ax.set_title(
+        'All Q-values — every Q-table entry plotted as one dot',
+        fontsize=13, pad=12
+    )
+
+    ax.set_xticks(range(25))
+    ax.set_xticklabels(
+        [f'S{s}' for s in range(25)],
+        rotation=45, fontsize=8
+    )
+
+    ax.grid(True, alpha=0.3)
+
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w',
+               markerfacecolor='#16A34A', markersize=7,
+               label='Positive Q-value (good action)'),
+        Line2D([0], [0], marker='o', color='w',
+               markerfacecolor='#DC2626', markersize=7,
+               label='Negative Q-value (bad / costly action)'),
+    ]
+    ax.legend(handles=legend_elements, fontsize=9,
+              loc='lower right')
+
     plt.tight_layout()
     return fig

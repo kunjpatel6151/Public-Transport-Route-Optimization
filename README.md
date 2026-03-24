@@ -249,7 +249,7 @@ After launching the app and clicking **"▶ Run & Find Optimal Path"**, you will
 1. **📊 Training Summary** — Episode count, final average reward, journey time, distance, and whether the destination was reached
 2. **🗺️ Network Map** — All 25 routes drawn with individual colors and labels, optimal path highlighted in red
 3. **📈 Learning Curve** — Raw and smoothed reward convergence with best-average marker
-4. **🔥 Q-Table** — Max Q-value per stop (green = positive, red = negative)
+4. **🔥 Q-Table** — Every Q-table entry as an individual dot (green = positive, red = negative) showing the full value distribution per stop
 5. **🏁 Optimal Path Table** — Step-by-step route with colour-coded rows (blue = start, purple = transfer, green = destination)
 
 ---
