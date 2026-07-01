@@ -2,14 +2,6 @@ STOPS = list(range(25))
 SOURCE = 0
 DESTINATION = 24
 
-# Every stop served by 2+ routes is a hub.
-# S9  served by Bus2, Bus8, Auto4      → hub
-# S4  served by Bus1, Bus8             → hub
-# S14 served by Bus3, Bus8, Auto8      → hub
-# S19 served by Bus4, Bus8             → hub
-# S21 served by Metro1, Auto11         → hub
-# S22 served by Bus5, Bus7             → hub
-# S23 served by Bus5, Metro2, Auto12   → hub
 HUB_STOPS = {1, 2, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14,
              15, 16, 17, 18, 19, 21, 22, 23}
 
